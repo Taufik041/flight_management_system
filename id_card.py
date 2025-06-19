@@ -17,7 +17,7 @@ text_positions = {
         'designation': (50, 250),
         'host': (50, 300),
         'meeting_room': (50, 340),
-        'datetime': (card_width - 200 - 110, 970)
+        'roll_no': (card_width - 230, 970)
     }
 
 # Font setup
@@ -96,18 +96,18 @@ def add_qrcode(card_bg, id):
 
 
 # Add text
-def add_text(draw, user_data, event_data, datetime):
+def add_text(draw, user_data, event_data, roll_no):
     draw.text(text_positions['first_name'], user_data["first_name"], font=poppins_bold, fill='black')
     draw.text(text_positions['last_name'], user_data["last_name"], font=poppins_semibold, fill='black')
     draw.text(text_positions['designation'], event_data["event_name"], font=poppins_medium, fill='black')
     draw.text(text_positions['host'], f"Host: {event_data['host']}", font=poppins_regular, fill='black')
     draw.text(text_positions['meeting_room'], event_data["place"], font=poppins_regular, fill='black')
-    draw.text(text_positions['datetime'], datetime, font=poppins_regular, fill='white')
+    draw.text(text_positions['roll_no'], roll_no, font=poppins_regular, fill='white')
     return draw
 
 
 # Generate ID card
-def generate_id_card(user_data, event_data, datetime, id):
+def generate_id_card(user_data, event_data, roll_no, id):
     
     bg_path = "assets/images/background.jpg"
     profile_img_path = "assets/self.jpg"
@@ -123,7 +123,7 @@ def generate_id_card(user_data, event_data, datetime, id):
 
     # Draw text directly on the rounded card
     draw = ImageDraw.Draw(card)
-    draw = add_text(draw, user_data, event_data, datetime)
+    draw = add_text(draw, user_data, event_data, roll_no)
 
     # Final composition and save
     final_card = Image.new('RGBA', (card_width, card_height), (255, 255, 255, 255))
@@ -146,7 +146,7 @@ def main():
             "host": "Lisa Chan, Stark Sdn Bhd",
             "place": "Meeting Room £, Tower 2, Level 7"
         },
-        datetime="14/07/2023  3:25PM",
+        roll_no="12345ABCDE",
         id="12345ABCDE"
     )
     
