@@ -140,7 +140,7 @@ def generate_id_card(user_data, event_data, datetime, id):
 
 def main():
     generate_id_card(
-        user_data={"first_name": "Taufikks", "last_name": "Khanjsjd"},
+        user_data={"first_name": "Taufik", "last_name": "Khan"},
         event_data={
             "event_name": "Event dssd1",
             "host": "Lisa Chan, Stark Sdn Bhd",

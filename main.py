@@ -3,10 +3,21 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
+from database import engine, SessionDep, create_db_and_tables
+from contextlib import asynccontextmanager
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        create_db_and_tables()
+        yield
+    finally:
+        logger.info("Application shutdown complete.")
+        engine.dispose()
 
+
+app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="./assets/static"), name="static")
 
 
@@ -17,12 +28,9 @@ async def favicon():
 
 @app.get("/")
 def read_root():
-    return {"message": "Hello World"}
+   return {"message": "Hello World"}
 
-@app.get("/one")
-def read_one():
-    return {"message": "One"}
 
-@app.get("/one2")
-def read_one2():
-    return {"message": "One2"}
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="localhost", reload=True, port=8000)
