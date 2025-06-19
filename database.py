@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from sqlmodel import Field, Session, SQLModel, create_engine, select
-from schemas import User, Application, Program, PaymentLog
+from schemas import User, Program, PaymentLog, Enrollment, Task, TaskCompletion
 from dotenv import load_dotenv
 import os
 

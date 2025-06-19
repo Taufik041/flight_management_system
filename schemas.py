@@ -8,10 +8,12 @@ class User(SQLModel, table=True):
         primary_key=True,
         description="8-digit student ID or admin ID",
     )
-    name: str
+    first_name: str
+    last_name: str
     email: str
-    password_hash: str
+    password: str
     phone_number: int
+    date_of_birth: datetime
 
     enrollments: List["Enrollment"] = Relationship(back_populates="user")
     payment_logs: List["PaymentLog"] = Relationship(back_populates="user")
@@ -57,9 +59,11 @@ class Task(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     program_id: int = Field(foreign_key="program.id")
     title: str
+    description: str
     cost: float = 0.0
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    duration: int
 
+    created_at: datetime = Field(default_factory=datetime.utcnow)
     completions: List["TaskCompletion"] = Relationship(back_populates="task")
 
 
