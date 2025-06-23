@@ -15,7 +15,7 @@ text_positions = {
         'first_name': (46, 45),
         'last_name': (50, 160),
         'designation': (50, 250),
-        'host': (50, 300),
+        'instructor': (50, 300),
         'meeting_room': (50, 340),
         'roll_no': (card_width - 230, 970)
     }
@@ -91,7 +91,7 @@ def add_qrcode(card_bg, id):
     qr_img = qr.make_image(fill_color="black", back_color="white", image_factory=PilImage).convert("RGBA")
     qr_img = qr_img.resize((qr_size, qr_size))
     qr_img = round_corners(qr_img, 20)
-    card_bg.alpha_composite(qr_img, (card_width - qr_size - 50, 750))
+    card_bg.alpha_composite(qr_img, (card_width - qr_size - 50, 765))
     return card_bg    
 
 
@@ -99,8 +99,8 @@ def add_qrcode(card_bg, id):
 def add_text(draw, user_data, event_data, roll_no):
     draw.text(text_positions['first_name'], user_data["first_name"], font=poppins_bold, fill='black')
     draw.text(text_positions['last_name'], user_data["last_name"], font=poppins_semibold, fill='black')
-    draw.text(text_positions['designation'], event_data["event_name"], font=poppins_medium, fill='black')
-    draw.text(text_positions['host'], f"Host: {event_data['host']}", font=poppins_regular, fill='black')
+    draw.text(text_positions['designation'], event_data["designation"], font=poppins_medium, fill='black')
+    draw.text(text_positions['instructor'], f"Instructor: {event_data['instructor']}", font=poppins_regular, fill='black')
     draw.text(text_positions['meeting_room'], event_data["place"], font=poppins_regular, fill='black')
     draw.text(text_positions['roll_no'], roll_no, font=poppins_regular, fill='white')
     return draw
@@ -110,7 +110,7 @@ def add_text(draw, user_data, event_data, roll_no):
 def generate_id_card(user_data, event_data, roll_no, id):
     
     bg_path = "assets/images/background.jpg"
-    profile_img_path = "assets/self.jpg"
+    profile_img_path = "assets/images/self.jpg"
     logo_path = "assets/images/logo.png"
     
     card_bg, card, draw = blank_card()
@@ -142,8 +142,8 @@ def main():
     generate_id_card(
         user_data={"first_name": "Taufik", "last_name": "Khan"},
         event_data={
-            "event_name": "Event dssd1",
-            "host": "Lisa Chan, Stark Sdn Bhd",
+            "designation": "Admin",
+            "instructor": "Lisa Chan, Stark Sdn Bhd",
             "place": "Meeting Room £, Tower 2, Level 7"
         },
         roll_no="12345ABCDE",
