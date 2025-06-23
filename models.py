@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 
 # Request body model
@@ -18,3 +18,22 @@ class TaskUpdate(BaseModel):
     description: Optional[str]
     cost: Optional[float]
     duration: Optional[int]
+    
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class SignupRequest(BaseModel):
+    email: EmailStr
+    password: str
+    firstName: str
+    lastName: str
+    phoneNumber: str
+    dateOfBirth: str
+    profilePhoto: Optional[str] = None
+
+class AuthResponse(BaseModel):
+    success: bool
+    message: str
+    user_type: Optional[str] = None
+    user_id: Optional[int] = None

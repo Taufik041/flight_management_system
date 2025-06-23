@@ -17,6 +17,8 @@ class User(SQLModel, table=True):
     enrollments: List["Enrollment"] = Relationship(back_populates="user")
     payment_logs: List["PaymentLog"] = Relationship(back_populates="user")
     task_completions: List["TaskCompletion"] = Relationship(back_populates="user")
+    notifications: List["Notification"] = Relationship(back_populates="user")
+
 
 class Program(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -72,3 +74,12 @@ class PaymentLog(SQLModel, table=True):
 
     user: User = Relationship(back_populates="payment_logs")
     program: Program = Relationship(back_populates="payment_logs")
+
+class Notification(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+    message: str
+    type: str  # e.g., "negative_balance"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    user: User = Relationship(back_populates="notifications")

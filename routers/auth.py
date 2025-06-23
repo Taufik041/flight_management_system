@@ -5,28 +5,15 @@ from database import SessionDep, get_session
 from schemas import User
 from datetime import datetime
 from typing import Optional
+from models import LoginRequest, SignupRequest, AuthResponse
+from fastapi import Form, File, UploadFile
+import os
+from utils.email import send_email
+
+
 
 auth_router = APIRouter()
 
-# Request/Response Models
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-class SignupRequest(BaseModel):
-    email: EmailStr
-    password: str
-    firstName: str
-    lastName: str
-    phoneNumber: str
-    dateOfBirth: str
-    profilePhoto: Optional[str] = None
-
-class AuthResponse(BaseModel):
-    success: bool
-    message: str
-    user_type: Optional[str] = None
-    user_id: Optional[int] = None
 
 @auth_router.post("/login", response_model=AuthResponse)
 def login(request: LoginRequest, session: SessionDep):
@@ -40,10 +27,10 @@ def login(request: LoginRequest, session: SessionDep):
         )
     
     # Check regular user credentials
-    statement = select(User).where(User.email == request.email)
+    statement = select(User).where(User.email == request.email, User.is_active == True)
     user = session.exec(statement).first()
     
-    if not user or user.password != request.password:
+    if not user or user.password != request.password or not User.is_active:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     return AuthResponse(
@@ -52,9 +39,6 @@ def login(request: LoginRequest, session: SessionDep):
         user_type="user",
         user_id=user.id
     )
-
-from fastapi import Form, File, UploadFile
-import os
 
 @auth_router.post("/signup", response_model=AuthResponse)
 async def signup(
@@ -68,7 +52,7 @@ async def signup(
     session: Session = Depends(get_session)
 ):
     # Check if user exists
-    statement = select(User).where(User.email == email)
+    statement = select(User).where(User.email == email, User.is_active == True)
     if session.exec(statement).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -107,6 +91,12 @@ async def signup(
     session.commit()
     session.refresh(new_user)
 
+    send_email(
+        to=email,
+        subject="Welcome to Drone Academy!",
+        body=f"Hi {firstName},\n\nWelcome to Drone Academy. We're glad to have you on board!"
+    )
+    
     return AuthResponse(
         success=True,
         message="Account created successfully",
