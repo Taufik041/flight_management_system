@@ -12,7 +12,7 @@ class User(SQLModel, table=True):
     last_name: str
     email: str
     password: str
-    phone_number: int
+    phone_number: str = Field(max_length=15)
     date_of_birth: datetime
     photo_path: Optional[str] = Field(default=None, description="Path to profile photo")
 

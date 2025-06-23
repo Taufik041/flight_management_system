@@ -1,5 +1,5 @@
 from logger import logger
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,7 +14,9 @@ from routers.auth import auth_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
+        logger.info("Application startup initiated")
         create_db_and_tables()
+        logger.info("Database tables created")
         yield
     finally:
         logger.info("Application shutdown complete.")
@@ -33,10 +35,20 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory="./assets/static"), name="static")
+app.mount("/media", StaticFiles(directory="media"), name="media")
+
 
 app.include_router(admin_router, prefix="/admin", tags=["admin"])
 app.include_router(student_router, prefix="/student", tags=["student"])
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"{request.method} {request.url.path}")
+    response = await call_next(request)
+    logger.info(f"{response.status_code} {request.method} {request.url.path}")
+    return response
 
 
 @app.get("/favicon.ico")
@@ -51,4 +63,11 @@ def read_root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="localhost", reload=True, port=8000)
+    uvicorn.run(
+        "main:app",
+        host="localhost",
+        port=8000,
+        reload=True,
+        log_level="info",
+        access_log=True
+    )
