@@ -1,19 +1,186 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import select
+from database import SessionDep
+from schemas import User, Program, Task, Enrollment, TaskCompletion, PaymentLog
+from typing import List
+from datetime import datetime
 
 student_router = APIRouter()
 
-@student_router.get("/dashboard")
-def dashboard():
-    ...
-    
+
+# ------------------------
+# Route 1: Get Enrolled Program + Available Programs
+# ------------------------
 @student_router.get("/programs")
-def programs():
-    ...
-    
+def get_programs(user_id: int, session: SessionDep):
+    # Get enrolled program
+    enrollment = session.exec(
+        select(Enrollment).where(Enrollment.user_id == user_id)
+    ).first()
+
+    enrolled_program = None
+    if enrollment:
+        enrolled_program = session.get(Program, enrollment.program_id)
+
+    # Get all available programs
+    programs = session.exec(select(Program)).all()
+
+    return {
+        "current_program": enrolled_program,
+        "available_programs": programs
+    }
+
+
+# ------------------------
+# Route 2: Enroll in a Program
+# ------------------------
+@student_router.post("/programs/{program_id}/enroll")
+def enroll_in_program(program_id: int, user_id: int, session: SessionDep):
+    # Check if already enrolled
+    existing = session.exec(
+        select(Enrollment).where(Enrollment.user_id == user_id)
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Already enrolled in a program")
+
+    program = session.get(Program, program_id)
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+
+    enrollment = Enrollment(user_id=user_id, program_id=program_id)
+    session.add(enrollment)
+    session.commit()
+    return {"success": True, "message": "Enrolled successfully"}
+
+
+# ------------------------
+# Route 3: View Tasks (current, completed, upcoming)
+# ------------------------
 @student_router.get("/tasks")
-def tasks():
-    ...
-    
-@student_router.get("/students")
-def students():
-    ...
+def get_tasks(user_id: int, session: SessionDep):
+    # Get enrolled program
+    enrollment = session.exec(
+        select(Enrollment).where(Enrollment.user_id == user_id)
+    ).first()
+    if not enrollment:
+        raise HTTPException(status_code=400, detail="Not enrolled in any program")
+
+    program_id = enrollment.program_id
+
+    # Get all tasks in program
+    tasks = session.exec(
+        select(Task).where(Task.program_id == program_id)
+    ).all()
+
+    # Get student's completed tasks
+    completions = session.exec(
+        select(TaskCompletion).where(TaskCompletion.user_id == user_id)
+    ).all()
+    completed_ids = {c.task_id for c in completions}
+
+    task_list = {
+        "completed": [],
+        "upcoming": []
+    }
+
+    for task in tasks:
+        task_data = {
+            "id": task.id,
+            "title": task.title,
+            "description": task.description,
+            "cost": task.cost,
+            "duration": task.duration
+        }
+        if task.id in completed_ids:
+            task_list["completed"].append(task_data)
+        else:
+            task_list["upcoming"].append(task_data)
+
+    return task_list
+
+
+# ------------------------
+# Route 4: Mark Task Completed + Add Flight Time
+# ------------------------
+@student_router.post("/tasks/{task_id}/complete")
+def complete_task(task_id: int, user_id: int, flight_time: int, session: SessionDep):
+    # Check if already marked completed
+    existing = session.exec(
+        select(TaskCompletion)
+        .where(TaskCompletion.task_id == task_id)
+        .where(TaskCompletion.user_id == user_id)
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Task already completed")
+
+    task = session.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    completion = TaskCompletion(
+        user_id=user_id,
+        task_id=task_id,
+        flight_time=flight_time,
+        charge_amount=task.cost  # cost may vary later based on flight_time if needed
+    )
+    session.add(completion)
+    session.commit()
+    return {"success": True, "message": "Task marked as completed"}
+
+
+# ------------------------
+# Route 5: Account Summary
+# ------------------------
+@student_router.get("/account")
+def get_account_summary(user_id: int, session: SessionDep):
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    payments = session.exec(
+        select(PaymentLog).where(PaymentLog.user_id == user_id)
+    ).all()
+
+    completions = session.exec(
+        select(TaskCompletion).where(TaskCompletion.user_id == user_id)
+    ).all()
+
+    balance = sum(p.amount for p in payments) - sum(c.charge_amount for c in completions)
+
+    return {
+        "balance": balance,
+        "spent_summary": [
+            {
+                "task_id": c.task_id,
+                "flight_time": c.flight_time,
+                "amount": c.charge_amount
+            } for c in completions
+        ],
+        "payments": [
+            {
+                "program_id": p.program_id,
+                "amount": p.amount,
+                "paid_at": p.paid_at
+            } for p in payments
+        ]
+    }
+
+
+# ------------------------
+# Route 6: Make Payment (Fake)
+# ------------------------
+@student_router.post("/pay")
+def make_payment(user_id: int, program_id: int, amount: float, session: SessionDep):
+    program = session.get(Program, program_id)
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+
+    payment = PaymentLog(
+        user_id=user_id,
+        program_id=program_id,
+        amount=amount,
+        paid_at=datetime.utcnow()
+    )
+    session.add(payment)
+    session.commit()
+    return {"success": True, "message": "Payment recorded"}
