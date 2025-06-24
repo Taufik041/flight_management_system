@@ -266,10 +266,11 @@ def create_id_card(user_id: int, session: SessionDep):
         "instructor": program_title,
         "place" : "Room X, Campus A"
     }
-    
+    padded_id = str(user_id).zfill(9)
     card_filename = f"{user.first_name}.png"
     card_path = os.path.join("assets/cards", card_filename)
-    generate_id_card(user_data, event_data, str(user_id), str(user_id))
+    profile_img = user.photo_path
+    generate_id_card(user_data, event_data, padded_id, padded_id, profile_img)
     
     if not os.path.exists(card_path):
         raise HTTPException(status_code=500, detail="ID card generation failed")

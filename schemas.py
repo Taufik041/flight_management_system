@@ -74,11 +74,18 @@ class PaymentLog(SQLModel, table=True):
     user: User = Relationship(back_populates="payment_logs")
     program: Program = Relationship(back_populates="payment_logs")
 
+from sqlmodel import SQLModel, Field, Relationship
+from datetime import datetime
+from typing import Optional, TYPE_CHECKING
+
 class Notification(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")
-    message: str
-    type: str  # e.g., "negative_balance"
+    
+    title: str                           # Short title like "Balance Warning"
+    message: str                         # Full notification message
+    type: str = Field(index=True)        # e.g., "negative_balance", "welcome"
+    is_read: bool = Field(default=False) # UI can toggle this
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    user: User = Relationship(back_populates="notifications")
+    user: Optional["User"] = Relationship(back_populates="notifications")

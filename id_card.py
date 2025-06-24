@@ -97,20 +97,20 @@ def add_qrcode(card_bg, id):
 
 # Add text
 def add_text(draw, user_data, event_data, roll_no):
-    draw.text(text_positions['first_name'], user_data["first_name"], font=poppins_bold, fill='black')
-    draw.text(text_positions['last_name'], user_data["last_name"], font=poppins_semibold, fill='black')
+    draw.text(text_positions['first_name'], user_data["first_name"].capitalize(), font=poppins_bold, fill='black')
+    draw.text(text_positions['last_name'], user_data["last_name"].capitalize(), font=poppins_semibold, fill='black')
     draw.text(text_positions['designation'], event_data["designation"], font=poppins_medium, fill='black')
-    draw.text(text_positions['instructor'], f"Instructor: {event_data['instructor']}", font=poppins_regular, fill='black')
-    draw.text(text_positions['meeting_room'], event_data["place"], font=poppins_regular, fill='black')
+    draw.text(text_positions['instructor'], f"Program: {event_data['instructor'].capitalize()}", font=poppins_regular, fill='black')
+    draw.text(text_positions['meeting_room'], event_data["place"].capitalize(), font=poppins_regular, fill='black')
     draw.text(text_positions['roll_no'], roll_no, font=poppins_regular, fill='white')
     return draw
 
 
 # Generate ID card
-def generate_id_card(user_data: dict, event_data: dict, roll_no: str, id: str):
+def generate_id_card(user_data: dict, event_data: dict, roll_no: str, id: str, profile_img: str | None):
     
     bg_path = "assets/images/background.jpg"
-    profile_img_path = "assets/images/self.jpg"
+    profile_img_path = profile_img
     logo_path = "assets/images/logo.png"
     
     card_bg, card, draw = blank_card()
@@ -135,19 +135,20 @@ def generate_id_card(user_data: dict, event_data: dict, roll_no: str, id: str):
     # Save as PNG with transparency
     card_name = f"{user_data['first_name']}.png"
     final_card.save(f"assets/cards/{card_name}", dpi=(300, 300))
-    print(f"ID Card: {card_name} generated successfully!")
+    print(f"ID Card: {card_name.capitalize()} generated successfully!")
 
 
 def main():
     generate_id_card(
-        user_data={"first_name": "Taufik", "last_name": "Khan"},
+        user_data={"first_name": "taufik", "last_name": "khan"},
         event_data={
             "designation": "Admin",
             "instructor": "Lisa Chan, Stark Sdn Bhd",
             "place": "Meeting Room £, Tower 2, Level 7"
         },
         roll_no="12345ABCDE",
-        id="12345ABCDE"
+        id="12345ABCDE",
+        profile_img = "assets/images/self.jpg"
     )
     
 

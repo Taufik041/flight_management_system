@@ -1,11 +1,8 @@
 from sqlmodel import Session, select
 from database import engine
-from schemas import User, TaskCompletion, PaymentLog
+from schemas import User, TaskCompletion, PaymentLog, Notification
 from utils.email import send_email
 from logger import logger
-
-# Track already-notified users to avoid duplicate notifications
-notified_users = set()
 
 def check_negative_balances():
     logger.info("🔁 Running hourly negative balance check...")
@@ -14,7 +11,6 @@ def check_negative_balances():
         users = session.exec(select(User).where(User.is_active == True)).all()
 
         for user in users:
-            # Calculate balance
             payments = session.exec(
                 select(PaymentLog).where(PaymentLog.user_id == user.id)
             ).all()
@@ -24,14 +20,37 @@ def check_negative_balances():
 
             balance = sum(p.amount for p in payments) - sum(c.charge_amount for c in completions)
 
-            if balance < 0 and user.id not in notified_users:
-                # Send email
-                send_email(
-                    to=user.email,
-                    subject="⚠️ Negative Account Balance",
-                    body=f"Hi {user.first_name},\n\nYour current balance is ₹{balance:.2f}. Please top-up your account to avoid disruption."
-                )
+            # Only notify if negative and not already notified
+            if balance < 0:
+                existing = session.exec(
+                    select(Notification).where(
+                        Notification.user_id == user.id,
+                        Notification.type == "negative_balance"
+                    )
+                ).first()
 
-                # Track notification
-                notified_users.add(user.id)
-                logger.info(f"📧 Sent negative balance alert to {user.email}")
+                if not existing:
+                    # Send email
+                    send_email(
+                        to=user.email,
+                        subject="⚠️ Negative Account Balance",
+                        body=(
+                            f"Hi {user.first_name},\n\n"
+                            f"Your current balance is ₹{balance:.2f}. "
+                            "Please top-up your account to avoid disruption.\n\n"
+                            "Thanks,\nTeam"
+                        )
+                    )
+
+                    # Save notification
+                    if user.id is not None:  # Ensure user.id is not None
+                        notif = Notification(
+                            user_id=user.id,
+                            title="Negative Balance Alert",
+                            message=f"Your balance is ₹{balance:.2f}. Please add funds.",
+                            type="negative_balance"
+                        )
+                    session.add(notif)
+                    session.commit()
+
+                    logger.info(f"📧 Sent negative balance alert to {user.email}")

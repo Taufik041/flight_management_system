@@ -32,7 +32,7 @@ def send_email(to: str, subject: str, body: str, attachment_path: str = ""):
             encoders.encode_base64(part)
             part.add_header(
                 "Content-Disposition",
-                f"attachment; filename='{os.path.basename(attachment_path)}'"
+                f"attachment; filename={os.path.basename(attachment_path)}"
             )
             msg.attach(part)
     

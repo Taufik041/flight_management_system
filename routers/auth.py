@@ -73,7 +73,7 @@ async def signup(
         ext = "jpg"  # default extension
         
     filename = f"{email.replace('@', '_')}_{int(datetime.utcnow().timestamp())}.{ext}"
-    filepath = os.path.join("media/photos", filename)
+    filepath = os.path.join("D:/bipros_evaluation/flight_management_system/media/photos", filename)
 
     with open(filepath, "wb") as f:
         f.write(await profilePhoto.read())
@@ -111,7 +111,9 @@ async def signup(
         "place" : "Room X, Campus A"
     }
     roll_no = str(new_user.id)
-    generate_id_card(user_data, event_data, roll_no, roll_no)
+    padded_id = str(roll_no).zfill(9)
+    profile_img = filepath
+    generate_id_card(user_data, event_data, padded_id, padded_id, profile_img)
     card_path = f"assets/cards/{new_user.first_name}.png"
     
     email_body = {
