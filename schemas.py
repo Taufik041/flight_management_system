@@ -74,10 +74,6 @@ class PaymentLog(SQLModel, table=True):
     user: User = Relationship(back_populates="payment_logs")
     program: Program = Relationship(back_populates="payment_logs")
 
-from sqlmodel import SQLModel, Field, Relationship
-from datetime import datetime
-from typing import Optional, TYPE_CHECKING
-
 class Notification(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id")

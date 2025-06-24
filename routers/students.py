@@ -67,8 +67,42 @@ def enroll_in_program(program_id: int, user_id: int, session: SessionDep):
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
 
+    user = session.exec(
+        select(User).where(
+            User.id == user_id,
+            User.is_active == True
+        )
+    ).first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    payments = session.exec(
+        select(PaymentLog).where(PaymentLog.user_id == user_id)
+    ).all()
+    
+    completions = session.exec(
+        select(TaskCompletion).where(TaskCompletion.user_id == user_id)
+    ).all()
+    
+    balance = sum(p.amount for p in payments) - sum(c.charge_amount for c in completions)
+    if balance < program.price:
+        raise HTTPException(
+            status_code=402,
+            detail=f"❌ Insufficient balance. Required: ₹{program.price}, Available: ₹{balance:.2f}"
+        )
+
     enrollment = Enrollment(user_id=user_id, program_id=program_id)
     session.add(enrollment)
+
+    session.add(
+        PaymentLog(
+            user_id=user_id,
+            program_id=program_id,
+            amount =- program.price
+        )
+    )
+
     session.commit()
     return {"success": True, "message": "Enrolled successfully"}
 
