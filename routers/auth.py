@@ -9,8 +9,8 @@ from models import LoginRequest, SignupRequest, AuthResponse
 from fastapi import Form, File, UploadFile
 import os
 from utils.email import send_email
-
-
+from id_card import generate_id_card
+from schemas import Program, Enrollment
 
 auth_router = APIRouter()
 
@@ -70,7 +70,8 @@ async def signup(
     if profilePhoto.filename and "." in profilePhoto.filename:
         ext = profilePhoto.filename.split(".")[-1]
     else:
-        ext = "jpg"  # default extension if filename is missing or has no extension
+        ext = "jpg"  # default extension
+        
     filename = f"{email.replace('@', '_')}_{int(datetime.utcnow().timestamp())}.{ext}"
     filepath = os.path.join("media/photos", filename)
 
@@ -91,10 +92,40 @@ async def signup(
     session.commit()
     session.refresh(new_user)
 
+    # Get currently enrolled program title for instructor field
+    enrollment = session.exec(
+        select(Enrollment).where(Enrollment.user_id == new_user.id, Enrollment.is_active == True)
+    ).first() or None
+
+    program = session.get(Program, enrollment.program_id) if enrollment else None
+    program_title = program.title if program else "N/A"
+
+    user_data = {
+        "first_name": new_user.first_name,
+        "last_name": new_user.last_name
+    }
+    
+    event_data = {
+        "designation": "Student",
+        "instructor": program_title,
+        "place" : "Room X, Campus A"
+    }
+    roll_no = str(new_user.id)
+    generate_id_card(user_data, event_data, roll_no, roll_no)
+    card_path = f"assets/cards/{new_user.first_name}.png"
+    
+    email_body = {
+        "recipient": email,
+        "subject": "Welcome to the Program!",
+        "body": f"Hi {firstName},\n\nWelcome to the program. We're glad to have you on board!",
+        "attachments": card_path
+    }
+    
     send_email(
-        to=email,
-        subject="Welcome to Drone Academy!",
-        body=f"Hi {firstName},\n\nWelcome to Drone Academy. We're glad to have you on board!"
+        to = email_body["recipient"],
+        subject = email_body["subject"],
+        body= email_body["body"],
+        attachment_path = email_body["attachments"]
     )
     
     return AuthResponse(

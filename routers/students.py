@@ -4,7 +4,9 @@ from database import SessionDep
 from schemas import User, Program, Task, Enrollment, TaskCompletion, PaymentLog
 from typing import List
 from datetime import datetime
-
+from id_card import generate_id_card
+from fastapi.responses import FileResponse
+import os
 
 student_router = APIRouter()
 
@@ -213,7 +215,7 @@ def make_payment(user_id: int, program_id: int, amount: float, session: SessionD
     program = session.exec(
         select(Program).where(
             Program.id == program_id,
-            Program.is_active
+            Program.is_active == True
             )
         ).first()
     
@@ -229,3 +231,47 @@ def make_payment(user_id: int, program_id: int, amount: float, session: SessionD
     session.add(payment)
     session.commit()
     return {"success": True, "message": "Payment recorded"}
+
+
+# ------------------------
+# Route 7: New id card
+# ------------------------
+@student_router.post("/id_card")
+def create_id_card(user_id: int, session: SessionDep):
+    user = session.exec(
+        select(User).where(
+            User.id == user_id,
+            User.is_active == True
+        )
+    ).first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # Get currently enrolled program title for instructor field
+    enrollment = session.exec(
+        select(Enrollment).where(Enrollment.user_id == user_id, Enrollment.is_active == True)
+    ).first()
+
+    program = session.get(Program, enrollment.program_id) if enrollment else None
+    program_title = program.title if program else "N/A"
+
+    user_data = {
+        "first_name": user.first_name,
+        "last_name": user.last_name
+    }
+    
+    event_data = {
+        "designation": "Student",
+        "instructor": program_title,
+        "place" : "Room X, Campus A"
+    }
+    
+    card_filename = f"{user.first_name}.png"
+    card_path = os.path.join("assets/cards", card_filename)
+    generate_id_card(user_data, event_data, str(user_id), str(user_id))
+    
+    if not os.path.exists(card_path):
+        raise HTTPException(status_code=500, detail="ID card generation failed")
+    
+    return FileResponse(card_path, media_type="image/png", filename=card_filename)

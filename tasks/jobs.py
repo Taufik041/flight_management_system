@@ -27,7 +27,7 @@ def check_negative_balances():
             if balance < 0 and user.id not in notified_users:
                 # Send email
                 send_email(
-                    to_email=user.email,
+                    to=user.email,
                     subject="⚠️ Negative Account Balance",
                     body=f"Hi {user.first_name},\n\nYour current balance is ₹{balance:.2f}. Please top-up your account to avoid disruption."
                 )

@@ -3,19 +3,22 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-import os
 from database import engine, SessionDep, create_db_and_tables
 from contextlib import asynccontextmanager
 from routers.admin import admin_router
 from routers.students import student_router
 from routers.auth import auth_router
-
+from tasks.scheduler import scheduler
+from dotenv import load_dotenv
+import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         logger.info("Application startup initiated")
         create_db_and_tables()
+        scheduler.start()
+        load_dotenv()
         logger.info("Database tables created")
         yield
     finally:

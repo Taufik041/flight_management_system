@@ -107,7 +107,7 @@ def add_text(draw, user_data, event_data, roll_no):
 
 
 # Generate ID card
-def generate_id_card(user_data, event_data, roll_no, id):
+def generate_id_card(user_data: dict, event_data: dict, roll_no: str, id: str):
     
     bg_path = "assets/images/background.jpg"
     profile_img_path = "assets/images/self.jpg"

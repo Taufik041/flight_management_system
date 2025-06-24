@@ -19,7 +19,6 @@ class User(SQLModel, table=True):
     task_completions: List["TaskCompletion"] = Relationship(back_populates="user")
     notifications: List["Notification"] = Relationship(back_populates="user")
 
-
 class Program(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str

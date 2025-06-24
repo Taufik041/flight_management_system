@@ -1,12 +1,14 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-def send_email(to: str, subject: str, body: str):
+def send_email(to: str, subject: str, body: str, attachment_path: str = ""):
     sender_email = os.getenv("SMTP_EMAIL")
     sender_password = os.getenv("SMTP_PASSWORD")
     
@@ -23,6 +25,17 @@ def send_email(to: str, subject: str, body: str):
     msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain"))
 
+    if attachment_path and os.path.exists(attachment_path):
+        with open(attachment_path, "rb") as attachment_file:
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(attachment_file.read())
+            encoders.encode_base64(part)
+            part.add_header(
+                "Content-Disposition",
+                f"attachment; filename='{os.path.basename(attachment_path)}'"
+            )
+            msg.attach(part)
+    
     with smtplib.SMTP(smtp_server, smtp_port) as server:
         server.starttls()
         server.login(sender_email, sender_password)
