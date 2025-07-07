@@ -1,38 +1,37 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Form, File, UploadFile
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
 from database import SessionDep, get_session
-from schemas import User
+from schemas import User, Program, Enrollment
 from datetime import datetime
 from typing import Optional
 from models import LoginRequest, SignupRequest, AuthResponse
-from fastapi import Form, File, UploadFile
 import os
+from logger import logger
 from utils.email import send_email
+from utils.security import hash_password, verify_password
 from id_card import generate_id_card
-from schemas import Program, Enrollment
 
 auth_router = APIRouter()
 
-
 @auth_router.post("/login", response_model=AuthResponse)
 def login(request: LoginRequest, session: SessionDep):
-    # Check hardcoded admin credentials
-    if request.email == "admin" and request.password == "admin":
+    # ✅ Hardcoded Admin Login
+    if request.email == "admin@gmail.com" and request.password == "Admin123":
         return AuthResponse(
             success=True,
             message="Admin login successful",
             user_type="admin",
             user_id=0
         )
-    
-    # Check regular user credentials
+
+    # ✅ Check DB User
     statement = select(User).where(User.email == request.email, User.is_active == True)
     user = session.exec(statement).first()
-    
-    if not user or user.password != request.password or not User.is_active:
+
+    if not user or not verify_password(request.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+
     return AuthResponse(
         success=True,
         message="Login successful",
@@ -40,15 +39,17 @@ def login(request: LoginRequest, session: SessionDep):
         user_id=user.id
     )
 
+
+
 @auth_router.post("/signup", response_model=AuthResponse)
 async def signup(
     email: EmailStr = Form(...),
     password: str = Form(...),
-    firstName: str = Form(...),
-    lastName: str = Form(...),
-    phoneNumber: str = Form(...),
-    dateOfBirth: str = Form(...),
-    profilePhoto: UploadFile = File(...),
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    phone_number: str = Form(...),
+    date_of_birth: str = Form(...),
+    profile_photo: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session)
 ):
     # Check if user exists
@@ -58,77 +59,52 @@ async def signup(
 
     # Parse date
     try:
-        dob = datetime.strptime(dateOfBirth, "%Y-%m-%d")
+        dob = datetime.strptime(date_of_birth, "%Y-%m-%d")
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
     # Clean phone number
-    cleaned_phone = int("".join(filter(str.isdigit, phoneNumber)))
+    cleaned_phone = int("".join(filter(str.isdigit, phone_number)))
 
-    # Save profile photo
+    # Save profile photo if provided, else use default
     os.makedirs("media/photos", exist_ok=True)
-    if profilePhoto.filename and "." in profilePhoto.filename:
-        ext = profilePhoto.filename.split(".")[-1]
+    if profile_photo and profile_photo.filename and "." in profile_photo.filename:
+        ext = profile_photo.filename.split(".")[-1]
+        filename = f"{email.replace('@', '_')}_{int(datetime.utcnow().timestamp())}.{ext}"
+        filepath = os.path.join("D:/bipros_evaluation/flight_management_system/media/photos", filename)
+        with open(filepath, "wb") as f:
+            f.write(await profile_photo.read())
+        photo_path = filepath
     else:
-        ext = "jpg"  # default extension
-        
-    filename = f"{email.replace('@', '_')}_{int(datetime.utcnow().timestamp())}.{ext}"
-    filepath = os.path.join("D:/bipros_evaluation/flight_management_system/media/photos", filename)
-
-    with open(filepath, "wb") as f:
-        f.write(await profilePhoto.read())
+        # Use a default placeholder image (ensure this file exists in your static/media/photos folder)
+        photo_path = "D:/bipros_evaluation/flight_management_system/media/photos/placeholder-user.jpg"
 
     # Save user to DB
     new_user = User(
-        first_name=firstName,
-        last_name=lastName,
+        first_name=first_name,
+        last_name=last_name,
         email=email,
-        password=password,
+        password=hash_password(password),
         phone_number=str(cleaned_phone),
         date_of_birth=dob,
-        photo_path=filepath,
+        photo_path=photo_path,
     )
     session.add(new_user)
     session.commit()
     session.refresh(new_user)
 
-    # Get currently enrolled program title for instructor field
-    enrollment = session.exec(
-        select(Enrollment).where(Enrollment.user_id == new_user.id, Enrollment.is_active == True)
-    ).first() or None
-
-    program = session.get(Program, enrollment.program_id) if enrollment else None
-    program_title = program.title if program else "N/A"
-
-    user_data = {
-        "first_name": new_user.first_name,
-        "last_name": new_user.last_name
-    }
-    
-    event_data = {
-        "designation": "Student",
-        "instructor": program_title,
-        "place" : "Room X, Campus A"
-    }
-    roll_no = str(new_user.id)
-    padded_id = str(roll_no).zfill(9)
-    profile_img = filepath
-    generate_id_card(user_data, event_data, padded_id, padded_id, profile_img)
-    card_path = f"assets/cards/{new_user.first_name}.png"
-    
-    email_body = {
-        "recipient": email,
-        "subject": "Welcome to the Program!",
-        "body": f"Hi {firstName},\n\nWelcome to the program. We're glad to have you on board!",
-        "attachments": card_path
-    }
-    
-    send_email(
-        to = email_body["recipient"],
-        subject = email_body["subject"],
-        body= email_body["body"],
-        attachment_path = email_body["attachments"]
-    )
+    # Try to send welcome email - don't fail signup if email fails
+    try:
+        email_sent = send_email(
+            to=email,
+            subject="Welcome to the Flight Management System!",
+            body=f"Hi {first_name},\n\nWelcome to the Flight Management System! We're excited to have you on board.\n\nYou can now log in to your account and explore our programs.\n\nBest regards,\nFlight Management Team"
+        )
+        if not email_sent:
+            logger.warning(f"Welcome email could not be sent to {email}")
+    except Exception as e:
+        logger.error(f"Email service error during signup for {email}: {str(e)}")
+        # Continue without failing the signup
     
     return AuthResponse(
         success=True,

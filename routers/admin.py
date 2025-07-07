@@ -4,17 +4,24 @@ from database import SessionDep
 from schemas import User, Program, Task, Enrollment, TaskCompletion, PaymentLog
 from typing import List, Optional
 from models import ProgramCreate, TaskCreate, TaskUpdate
+from pydantic import BaseModel
+from datetime import datetime, timedelta
 
 admin_router = APIRouter()
 
-@admin_router.post("/programs/", response_model=Program)
+class StudentUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone_number: Optional[str] = None
+
+@admin_router.post("/programs/", response_model=None)
 def create_program(program_data: ProgramCreate, session: SessionDep):
     program_data_dict = dict(program_data)
     new_program = Program(**program_data_dict)
     session.add(new_program)
     session.commit()
     session.refresh(new_program)
-    return new_program
+    return {"success": True, "program": new_program.dict()}
 
 @admin_router.get("/programs/", response_model=List[Program])
 def list_programs(session: SessionDep):
@@ -23,30 +30,35 @@ def list_programs(session: SessionDep):
 
 @admin_router.get("/programs/{program_id}")
 def get_program_details(program_id: int, session: SessionDep):
-    
     program = session.exec(
         select(Program).where(Program.id == program_id, Program.is_active == True)
     ).first()
-    
     if not program:
         raise HTTPException(status_code=404, detail="Program not found")
 
-    # Count enrolled students
+    # Get enrolled students
     enrollments = session.exec(
         select(Enrollment).where(
             Enrollment.program_id == program_id,
             Enrollment.is_active == True
-            )
+        )
     ).all()
-    
-    student_count = len(enrollments)
+    students = []
+    for enrollment in enrollments:
+        user = session.get(User, enrollment.user_id)
+        if user:
+            students.append({
+                "id": user.id,
+                "name": f"{user.first_name} {user.last_name}",
+                "email": user.email
+            })
 
     # Get tasks for this program
     tasks = session.exec(
         select(Task).where(
             Task.program_id == program_id,
             Task.is_active == True
-            )
+        )
     ).all()
 
     return {
@@ -54,7 +66,8 @@ def get_program_details(program_id: int, session: SessionDep):
         "title": program.title,
         "description": program.description,
         "price": program.price,
-        "student_count": student_count,
+        "student_count": len(students),
+        "students": students,
         "tasks": tasks
     }
 
@@ -70,6 +83,16 @@ def deactivate_program(program_id: int, session: SessionDep):
     
     return {"success": True, "message": "Program deactivated"}
 
+@admin_router.post("/programs/{program_id}/toggle")
+def toggle_program_status(program_id: int, session: SessionDep):
+    program = session.get(Program, program_id)
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+    program.is_active = not program.is_active
+    session.add(program)
+    session.commit()
+    return {"success": True, "is_active": program.is_active}
+
 @admin_router.post("/programs/{program_id}/tasks/")
 def add_task_to_program(program_id: int, task_data: TaskCreate, session: SessionDep):
     # Ensure program exists
@@ -84,6 +107,7 @@ def add_task_to_program(program_id: int, task_data: TaskCreate, session: Session
         raise HTTPException(status_code=404, detail="Program not found")
 
     new_task = Task(**dict(task_data), program_id=program_id)
+    program.price = program.price + new_task.cost
     session.add(new_task)
     session.commit()
     session.refresh(new_task)
@@ -275,3 +299,74 @@ def remove_student_from_program(program_id: int, student_id: int, session: Sessi
     session.commit()
 
     return {"success": True, "message": "Student removed from program"}
+
+@admin_router.post("/tasks")
+def create_task(task_data: TaskCreate, session: SessionDep):
+    program = session.get(Program, task_data.program_id)
+    if not program:
+        raise HTTPException(status_code=404, detail="Program not found")
+    new_task = Task(
+        program_id=task_data.program_id,
+        title=task_data.title,
+        description=task_data.description,
+        cost=task_data.cost,
+        duration=task_data.duration
+    )
+    session.add(new_task)
+    session.commit()
+    session.refresh(new_task)
+    return {"success": True, "task": new_task.dict()}
+
+@admin_router.put("/students/{student_id}/update")
+def update_student_profile(student_id: int, update_data: StudentUpdate, session: SessionDep):
+    user = session.get(User, student_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Student not found")
+    
+    # Update only provided fields
+    if update_data.first_name is not None:
+        user.first_name = update_data.first_name
+    if update_data.last_name is not None:
+        user.last_name = update_data.last_name
+    if update_data.phone_number is not None:
+        user.phone_number = update_data.phone_number
+    
+    session.add(user)
+    session.commit()
+    
+    return {"success": True, "message": "Profile updated successfully"}
+
+@admin_router.get("/tasks")
+def list_tasks(session: SessionDep):
+    tasks = session.exec(select(Task)).all()
+    result = []
+    for task in tasks:
+        program = session.get(Program, task.program_id)
+        result.append({
+            "id": task.id,
+            "title": task.title,
+            "description": task.description,
+            "cost": task.cost,
+            "duration": task.duration,
+            "is_active": task.is_active,
+            "program_title": program.title if program else "",
+        })
+    return result
+
+@admin_router.get("/enrollments/last24h")
+def enrollments_last_24h(session: SessionDep):
+    since = datetime.utcnow() - timedelta(hours=24)
+    enrollments = session.exec(
+        select(Enrollment).where(Enrollment.enrolled_at >= since)
+    ).all()
+    return {"count": len(enrollments)}
+
+@admin_router.post("/tasks/{task_id}/toggle")
+def toggle_task_status(task_id: int, session: SessionDep):
+    task = session.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    task.is_active = not task.is_active
+    session.add(task)
+    session.commit()
+    return {"success": True, "is_active": task.is_active}

@@ -7,6 +7,7 @@ from datetime import datetime
 from id_card import generate_id_card
 from fastapi.responses import FileResponse
 import os
+from utils.email import send_email
 
 student_router = APIRouter()
 
@@ -86,6 +87,11 @@ def enroll_in_program(program_id: int, user_id: int, session: SessionDep):
     ).all()
     
     balance = sum(p.amount for p in payments) - sum(c.charge_amount for c in completions)
+    
+    tasks = session.exec(select(Task).where(Task.program_id == program.id)).all()
+    total_task_cost = sum(t.cost for t in tasks)
+    total_cost = program.price + total_task_cost
+    
     if balance < program.price:
         raise HTTPException(
             status_code=402,
@@ -99,11 +105,46 @@ def enroll_in_program(program_id: int, user_id: int, session: SessionDep):
         PaymentLog(
             user_id=user_id,
             program_id=program_id,
-            amount =- program.price
+            amount=-program.price
         )
     )
 
     session.commit()
+    
+    # Send welcome to program email and generate ID card
+    try:
+        # Get user details for ID card
+        user = session.get(User, user_id)
+        if user:
+            user_data = {
+                "first_name": user.first_name,
+                "last_name": user.last_name
+            }
+            
+            event_data = {
+                "designation": "Student",
+                "instructor": program.title,
+                "place": "Flight Training Center"
+            }
+            
+            padded_id = str(user_id).zfill(9)
+            profile_img = user.photo_path
+            
+            # Generate ID card
+            generate_id_card(user_data, event_data, padded_id, padded_id, profile_img)
+            
+            # Send welcome email with ID card attachment
+            card_path = f"assets/cards/{user.first_name}.png"
+            send_email(
+                to=user.email,
+                subject=f"Welcome to {program.title}!",
+                body=f"Hi {user.first_name},\n\nWelcome to {program.title}! We're excited to have you enrolled in our program.\n\nYour ID card has been generated and attached to this email.\n\nBest regards,\nFlight Management Team",
+                attachment_path=card_path
+            )
+    except Exception as e:
+        # Log error but don't fail enrollment
+        print(f"Error sending welcome email/generating ID card: {e}")
+    
     return {"success": True, "message": "Enrolled successfully"}
 
 

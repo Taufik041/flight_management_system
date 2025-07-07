@@ -8,6 +8,7 @@ class ProgramCreate(BaseModel):
     price: float
     
 class TaskCreate(BaseModel):
+    program_id: int
     title: str
     description: str
     cost: float

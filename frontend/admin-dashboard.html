@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Flight Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation Bar -->
+        <nav class="navbar">
+            <div class="navbar-brand">Flight Management System</div>
+            <ul class="navbar-links">
+                <li><a href="#dashboard" onclick="showSection('dashboardSection')">Dashboard</a></li>
+                <li><a href="#students" onclick="showSection('studentsSection')">Students</a></li>
+                <li><a href="#programs" onclick="showSection('programsSection')">Programs</a></li>
+                <li><a href="#tasks" onclick="showSection('tasksSection')">Tasks</a></li>
+                <li><button class="logout-btn" onclick="logout()">Logout</button></li>
+            </ul>
+        </nav>
+
+        <!-- Dashboard Section -->
+        <div id="dashboardSection" class="dashboard-section">
+            <h2>Admin Dashboard</h2>
+            
+            <div class="dashboard-grid">
+                <div class="dashboard-card">
+                    <h3>Total Students</h3>
+                    <p id="totalStudents">Loading...</p>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Total Programs</h3>
+                    <p id="totalPrograms">Loading...</p>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Enrollments (Last 24 Hours)</h3>
+                    <p id="enrollments24h">Loading...</p>
+                </div>
+            </div>
+            <div id="dashboardProgramsContainer" style="margin-top:32px;"></div>
+            <!-- Claude App Button -->
+            <div style="margin-top: 24px;">
+                <button onclick="openClaudeDesktop()" class="btn btn-primary" style="background: #4b8cff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem;">Open Claude Desktop</button>
+            </div>
+        </div>
+
+        <!-- Students Section -->
+        <div id="studentsSection" class="dashboard-section" style="display: none;">
+            <h2>Student Management</h2>
+            <div id="studentsContainer">
+                <p>Loading students...</p>
+            </div>
+        </div>
+
+        <!-- Programs Section -->
+        <div id="programsSection" class="dashboard-section" style="display: none;">
+            <div class="section-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+                <h2 style="margin: 0;">Program Management</h2>
+                <button onclick="showAddProgramForm()" class="btn btn-success add-program-btn">Add New Program</button>
+            </div>
+            <div id="programsContainer">
+                <p>Loading programs...</p>
+            </div>
+        </div>
+
+        <!-- Tasks Section -->
+        <div id="tasksSection" class="dashboard-section" style="display: none;">
+            <div class="section-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+                <h2 style="margin: 0;">Task Management</h2>
+                <button onclick="showAddTaskForm()" class="btn btn-success add-task-btn">Add New Task</button>
+            </div>
+            <div id="tasksContainer">
+                <p>Loading tasks...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Program Modal -->
+    <div id="addProgramModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div class="form-container" style="margin: 50px auto;">
+            <h2>Add New Program</h2>
+            <form id="addProgramForm">
+                <div class="form-group">
+                    <label for="programTitle">Title:</label>
+                    <input type="text" id="programTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="programDescription">Description:</label>
+                    <input type="text" id="programDescription" required>
+                </div>
+                <div class="form-group">
+                    <label for="programPrice">Price:</label>
+                    <input type="number" id="programPrice" step="0.01" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Add Program</button>
+                    <button type="button" onclick="hideAddProgramForm()" class="btn btn-danger">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div id="addTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div class="form-container" style="margin: 50px auto;">
+            <h2>Add New Task</h2>
+            <form id="addTaskForm">
+                <div class="form-group">
+                    <label for="taskProgram">Program:</label>
+                    <select id="taskProgram" required>
+                        <option value="">Select Program</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="taskTitle">Title:</label>
+                    <input type="text" id="taskTitle" required>
+                </div>
+                <div class="form-group">
+                    <label for="taskDescription">Description:</label>
+                    <input type="text" id="taskDescription" required>
+                </div>
+                <div class="form-group">
+                    <label for="taskCost">Cost:</label>
+                    <input type="number" id="taskCost" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="taskDuration">Duration (minutes):</label>
+                    <input type="number" id="taskDuration" required>
+                </div>
+                <button type="submit" class="submit-btn">Add Task</button>
+                <button type="button" onclick="hideAddTaskForm()" class="btn btn-secondary">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <style>
+    .navbar {
+        background: #667eea;
+        color: white;
+        padding: 16px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-radius: 0 0 10px 10px;
+        margin-bottom: 30px;
+    }
+    .navbar-brand {
+        font-size: 1.5rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+    }
+    .navbar-links {
+        list-style: none;
+        display: flex;
+        gap: 24px;
+        margin: 0;
+        padding: 0;
+        align-items: center;
+    }
+    .navbar-links li {
+        display: inline;
+    }
+    .navbar-links a {
+        color: white;
+        text-decoration: none;
+        font-size: 1rem;
+        padding: 8px 16px;
+        border-radius: 5px;
+        transition: background 0.2s;
+    }
+    .navbar-links a:hover {
+        background: #5a6fd8;
+    }
+    .navbar .logout-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1rem;
+        margin-left: 16px;
+    }
+    .navbar .logout-btn:hover {
+        background: #c82333;
+    }
+    .dashboard-section {
+        margin-top: 30px;
+    }
+    .student-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-left: 4px solid #667eea;
+    }
+    .student-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    .student-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+    .btn-success {
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 7px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .btn-success:hover {
+        background: #218838;
+    }
+    .add-program-btn {
+        margin-left: auto;
+        box-shadow: 0 2px 8px rgba(40,167,69,0.08);
+    }
+    .task-section-header {
+        margin-top: 32px;
+        margin-bottom: 16px;
+        font-size: 1.2rem;
+        color: #333;
+        font-weight: 600;
+    }
+    .task-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+        margin-bottom: 20px;
+        padding: 20px;
+        border-left: 5px solid #667eea;
+        transition: box-shadow 0.2s;
+    }
+    .task-card:hover {
+        box-shadow: 0 4px 16px rgba(102,126,234,0.15);
+    }
+    .task-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .task-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #fff;
+        margin-left: 10px;
+    }
+    .status-badge.active {
+        background: #28a745;
+    }
+    .status-badge.inactive {
+        background: #6c757d;
+    }
+    .task-card-body {
+        margin-bottom: 12px;
+        color: #444;
+    }
+    .task-card-actions {
+        display: flex;
+        gap: 10px;
+    }
+    .pretty-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 12px rgba(102,126,234,0.10);
+        margin-bottom: 28px;
+        padding: 28px 32px 18px 32px;
+        border-left: 6px solid #667eea;
+        transition: box-shadow 0.2s;
+    }
+    .pretty-card:hover {
+        box-shadow: 0 6px 24px rgba(102,126,234,0.18);
+    }
+    .program-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: #2d2d2d;
+    }
+    .program-meta {
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        margin-bottom: 6px;
+    }
+    .program-price {
+        font-size: 1.1rem;
+        color: #28a745;
+        font-weight: 600;
+    }
+    .program-description {
+        color: #555;
+        font-size: 1rem;
+        font-style: italic;
+    }
+    .expand-icon {
+        font-size: 2rem;
+        color: #667eea;
+        font-weight: bold;
+        margin-left: 18px;
+        transition: color 0.2s;
+    }
+    .expand-icon:hover {
+        color: #4953b8;
+    }
+    .dashboard-program-details {
+        background: #f7f8fa;
+        border-radius: 10px;
+        margin-top: 18px;
+        padding: 18px 20px;
+    }
+    .dashboard-program-details h5 {
+        margin-top: 0;
+        margin-bottom: 8px;
+        font-size: 1.1rem;
+        color: #333;
+    }
+    .dashboard-program-details ul {
+        margin: 0 0 12px 0;
+        padding-left: 20px;
+    }
+    .dashboard-program-details li {
+        margin-bottom: 6px;
+        font-size: 1rem;
+    }
+    .dashboard-program-details button.btn-primary.btn-sm {
+        padding: 3px 12px;
+        font-size: 0.95rem;
+        margin-left: 8px;
+    }
+    </style>
+
+    <script>
+        // Check if user is logged in as admin
+        const userType = localStorage.getItem('userType');
+        const userId = localStorage.getItem('userId');
+        
+        if (!userType || !userId || userType !== 'admin') {
+            window.location.href = 'login.html';
+        }
+        
+        // Navigation function
+        function showSection(sectionId) {
+            document.getElementById('dashboardSection').style.display = 'none';
+            document.getElementById('studentsSection').style.display = 'none';
+            document.getElementById('programsSection').style.display = 'none';
+            document.getElementById('tasksSection').style.display = 'none';
+            document.getElementById(sectionId).style.display = 'block';
+            
+            // Load data for the section
+            if (sectionId === 'studentsSection') {
+                loadStudents();
+            } else if (sectionId === 'programsSection') {
+                loadPrograms();
+            } else if (sectionId === 'tasksSection') {
+                loadTasks();
+            }
+        }
+        
+        // Load admin dashboard data
+        async function loadAdminDashboard() {
+            try {
+                // Load summary counts and programs
+                const [programsResponse, studentsResponse, enrollments24hResponse] = await Promise.all([
+                    fetch('http://localhost:8000/admin/programs'),
+                    fetch('http://localhost:8000/admin/students'),
+                    fetch('http://localhost:8000/admin/enrollments/last24h')
+                ]);
+                const programsData = await programsResponse.json();
+                const studentsData = await studentsResponse.json();
+                const enrollments24hData = await enrollments24hResponse.json();
+                document.getElementById('totalPrograms').textContent = programsData.length;
+                document.getElementById('totalStudents').textContent = studentsData.length;
+                document.getElementById('enrollments24h').textContent = enrollments24hData.count;
+
+                // Show program cards in dashboard
+                const dashboardProgramsContainer = document.getElementById('dashboardProgramsContainer');
+                if (dashboardProgramsContainer) {
+                    dashboardProgramsContainer.innerHTML = programsData.map(program => `
+                        <div class="dashboard-program-card pretty-card" id="dashboard-program-${program.id}">
+                            <div class="dashboard-program-header" onclick="toggleDashboardProgramDetails(${program.id})" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+                                <div>
+                                    <h3 class="program-title">${program.title}</h3>
+                                    <div class="program-meta">
+                                        <span class="program-price">₹${program.price}</span>
+                                        <span class="program-description">${program.description || ''}</span>
+                                    </div>
+                                </div>
+                                <span id="dashboard-expand-icon-${program.id}" class="expand-icon">+</span>
+                            </div>
+                            <div class="dashboard-program-details" id="dashboard-program-details-${program.id}" style="display:none;padding:10px 0 0 0;">
+                                <div><em>Loading...</em></div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading admin dashboard:', error);
+            }
+        }
+
+        // Toggle program details in dashboard
+        async function toggleDashboardProgramDetails(programId) {
+            const detailsDiv = document.getElementById(`dashboard-program-details-${programId}`);
+            const icon = document.getElementById(`dashboard-expand-icon-${programId}`);
+            if (detailsDiv.style.display === 'none') {
+                // Expand and load details
+                detailsDiv.style.display = 'block';
+                icon.textContent = '-';
+                // Fetch program details
+                try {
+                    const response = await fetch(`http://localhost:8000/admin/programs/${programId}`);
+                    const data = await response.json();
+                    // Tasks
+                    let tasksHtml = '<h5>Tasks</h5>';
+                    if (data.tasks && data.tasks.length > 0) {
+                        tasksHtml += '<ul>' + data.tasks.map(task => `<li>${task.title} <span style=\"color:#888;\">(₹${task.cost}, ${task.duration} min)</span></li>`).join('') + '</ul>';
+                    } else {
+                        tasksHtml += '<p>No tasks for this program.</p>';
+                    }
+                    // Students
+                    let studentsHtml = '<h5>Enrolled Students</h5>';
+                    if (data.student_count > 0 && data.students && data.students.length > 0) {
+                        studentsHtml += '<ul>' + data.students.map(student => `<li>${student.name} (${student.email}) <button onclick=\"viewStudentDetails(${student.id})\" class=\"btn btn-primary btn-sm\">View Details</button></li>`).join('') + '</ul>';
+                    } else {
+                        studentsHtml += '<p>No students enrolled.</p>';
+                    }
+                    detailsDiv.innerHTML = tasksHtml + studentsHtml;
+                } catch (error) {
+                    detailsDiv.innerHTML = '<p>Error loading details.</p>';
+                }
+            } else {
+                // Collapse
+                detailsDiv.style.display = 'none';
+                icon.textContent = '+';
+            }
+        }
+        
+        // Load students (only active ones)
+        async function loadStudents() {
+            try {
+                const studentsResponse = await fetch('http://localhost:8000/admin/students');
+                const studentsData = await studentsResponse.json();
+                
+                const studentsContainer = document.getElementById('studentsContainer');
+                if (studentsData.length > 0) {
+                    studentsContainer.innerHTML = studentsData.map(student => `
+                        <div class="student-card">
+                            <div class="student-info">
+                                <div>
+                                    <h4>${student.name}</h4>
+                                    <p><strong>Email:</strong> ${student.email}</p>
+                                    <p><strong>Balance:</strong> ₹${student.balance}</p>
+                                </div>
+                                <div>
+                                    <p><strong>Student ID:</strong> ${student.id}</p>
+                                    <p><strong>Status:</strong> <span style="color: green;">Active</span></p>
+                                </div>
+                            </div>
+                            <div class="student-actions">
+                                <button onclick="viewStudentDetails(${student.id})" class="btn btn-primary">View Details</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    studentsContainer.innerHTML = '<p>No active students found</p>';
+                }
+            } catch (error) {
+                console.error('Error loading students:', error);
+            }
+        }
+        
+        // Load programs
+        async function loadPrograms() {
+            try {
+                const programsResponse = await fetch('http://localhost:8000/admin/programs');
+                const programsData = await programsResponse.json();
+                
+                const programsContainer = document.getElementById('programsContainer');
+                if (programsData.length > 0) {
+                    programsContainer.innerHTML = programsData.map(program => `
+                        <div class="task-item">
+                            <h4>${program.title}</h4>
+                            <p>${program.description}</p>
+                            <div class="task-meta">
+                                <span>Price: ₹${program.price}</span>
+                                <span>Status: ${program.is_active ? 'Active' : 'Inactive'}</span>
+                                <button onclick="toggleProgramStatus(${program.id}, ${program.is_active})" class="btn btn-secondary">
+                                    ${program.is_active ? 'Deactivate' : 'Activate'}
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    programsContainer.innerHTML = '<p>No programs available</p>';
+                }
+            } catch (error) {
+                console.error('Error loading programs:', error);
+            }
+        }
+        
+        // Load tasks
+        async function loadTasks() {
+            try {
+                const tasksResponse = await fetch('http://localhost:8000/admin/tasks');
+                const tasksData = await tasksResponse.json();
+                const tasksContainer = document.getElementById('tasksContainer');
+                if (tasksData.length > 0) {
+                    tasksContainer.innerHTML = tasksData.map(task => renderTaskCard(task)).join('');
+                } else {
+                    tasksContainer.innerHTML = '<p>No tasks available</p>';
+                }
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+            }
+        }
+
+        // Render a single task card
+        function renderTaskCard(task) {
+            return `
+                <div class="task-card">
+                    <div class="task-card-header">
+                        <span class="task-title">${task.title}</span>
+                        <span class="status-badge ${task.is_active ? 'active' : 'inactive'}">${task.is_active ? 'Active' : 'Inactive'}</span>
+                    </div>
+                    <div class="task-card-body">
+                        <div><strong>Program:</strong> ${task.program_title || ''}</div>
+                        <div><strong>Cost:</strong> ₹${task.cost}</div>
+                        <div><strong>Duration:</strong> ${task.duration} min</div>
+                        <div><strong>Description:</strong> ${task.description}</div>
+                    </div>
+                    <div class="task-card-actions">
+                        <button onclick="toggleTaskStatus(${task.id}, ${task.is_active})" class="btn btn-secondary">
+                            ${task.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button onclick="editTask(${task.id})" class="btn btn-primary">Edit</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function showAddProgramForm() {
+            document.getElementById('addProgramModal').style.display = 'block';
+        }
+        
+        function hideAddProgramForm() {
+            document.getElementById('addProgramModal').style.display = 'none';
+        }
+        
+        function showAddTaskForm() {
+            // Load programs for dropdown
+            fetch('http://localhost:8000/admin/programs')
+                .then(response => response.json())
+                .then(programs => {
+                    const select = document.getElementById('taskProgram');
+                    select.innerHTML = '<option value="">Select Program</option>';
+                    programs.forEach(program => {
+                        select.innerHTML += `<option value="${program.id}">${program.title}</option>`;
+                    });
+                    document.getElementById('addTaskModal').style.display = 'block';
+                });
+        }
+        
+        function hideAddTaskForm() {
+            document.getElementById('addTaskModal').style.display = 'none';
+        }
+        
+        async function viewStudentDetails(studentId) {
+            try {
+                const response = await fetch(`http://localhost:8000/admin/students/${studentId}`);
+                const studentData = await response.json();
+                
+                const details = `
+                    Student Details:
+                    - Name: ${studentData.name}
+                    - Email: ${studentData.email}
+                    - Phone: ${studentData.phone}
+                    - Program: ${studentData.program || 'Not enrolled'}
+                    - Task Count: ${studentData.task_count}
+                    - Account Balance: ₹${studentData.account_balance}
+                `;
+                
+                alert(details);
+            } catch (error) {
+                alert('Failed to load student details');
+            }
+        }
+        
+        async function editStudent(studentId) {
+            try {
+                const response = await fetch(`http://localhost:8000/admin/students/${studentId}`);
+                const studentData = await response.json();
+                
+                const newFirstName = prompt('First Name:', studentData.name.split(' ')[0] || '');
+                const newLastName = prompt('Last Name:', studentData.name.split(' ')[1] || '');
+                const newPhone = prompt('Phone Number:', studentData.phone || '');
+                
+                if (newFirstName && newLastName) {
+                    const updateData = {
+                        first_name: newFirstName,
+                        last_name: newLastName,
+                        phone_number: newPhone
+                    };
+                    
+                    const updateResponse = await fetch(`http://localhost:8000/admin/students/${studentId}/update`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(updateData)
+                    });
+                    
+                    const updateResult = await updateResponse.json();
+                    
+                    if (updateResult.success) {
+                        alert('Student updated successfully!');
+                        loadStudents();
+                    } else {
+                        alert('Failed to update student: ' + updateResult.detail);
+                    }
+                }
+            } catch (error) {
+                alert('Failed to edit student');
+            }
+        }
+        
+        // Add Program Form Handler
+        document.getElementById('addProgramForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                title: document.getElementById('programTitle').value,
+                description: document.getElementById('programDescription').value,
+                price: parseFloat(document.getElementById('programPrice').value)
+            };
+            
+            try {
+                const response = await fetch('http://localhost:8000/admin/programs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Program added successfully!');
+                    hideAddProgramForm();
+                    loadPrograms();
+                    loadAdminDashboard();
+                } else {
+                    alert('Failed to add program: ' + data.detail);
+                }
+            } catch (error) {
+                console.error('Error adding program:', error);
+                alert('Failed to add program. Please try again.');
+            }
+        });
+        
+        // Add Task Form Handler
+        document.getElementById('addTaskForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                program_id: parseInt(document.getElementById('taskProgram').value),
+                title: document.getElementById('taskTitle').value,
+                description: document.getElementById('taskDescription').value,
+                cost: parseFloat(document.getElementById('taskCost').value),
+                duration: parseInt(document.getElementById('taskDuration').value)
+            };
+            
+            try {
+                const response = await fetch('http://localhost:8000/admin/tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Task added successfully!');
+                    hideAddTaskForm();
+                    loadTasks();
+                    loadAdminDashboard();
+                } else {
+                    alert('Failed to add task: ' + data.detail);
+                }
+            } catch (error) {
+                console.error('Error adding task:', error);
+                alert('Failed to add task. Please try again.');
+            }
+        });
+        
+        async function toggleProgramStatus(programId, currentStatus) {
+            try {
+                const response = await fetch(`http://localhost:8000/admin/programs/${programId}/toggle`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Program status updated!');
+                    loadPrograms();
+                    loadAdminDashboard();
+                } else {
+                    alert('Failed to update program status: ' + data.detail);
+                }
+            } catch (error) {
+                console.error('Error updating program status:', error);
+                alert('Failed to update program status. Please try again.');
+            }
+        }
+        
+        async function toggleTaskStatus(taskId, currentStatus) {
+            try {
+                const response = await fetch(`http://localhost:8000/admin/tasks/${taskId}/toggle`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Task status updated!');
+                    loadTasks();
+                    loadAdminDashboard();
+                } else {
+                    alert('Failed to update task status: ' + data.detail);
+                }
+            } catch (error) {
+                console.error('Error updating task status:', error);
+                alert('Failed to update task status. Please try again.');
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('userType');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userEmail');
+            window.location.href = 'index.html';
+        }
+        
+        function openClaudeDesktop() {
+            // Attempt to open the Claude desktop app via custom protocol
+            window.location.href = 'claude://';
+        }
+        
+        // Load dashboard on page load
+        loadAdminDashboard();
+    </script>
+</body>
+</html> 

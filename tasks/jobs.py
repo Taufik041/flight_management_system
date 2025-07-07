@@ -18,7 +18,12 @@ def check_negative_balances():
                 select(TaskCompletion).where(TaskCompletion.user_id == user.id)
             ).all()
 
-            balance = sum(p.amount for p in payments) - sum(c.charge_amount for c in completions)
+            task_charges = sum(c.charge_amount for c in completions)
+            flight_charges = sum((c.flight_time / 60) * 1000 for c in completions)
+            total_charges = task_charges + flight_charges
+            total_paid = sum(p.amount for p in payments)
+            
+            balance = total_paid - total_charges
 
             # Only notify if negative and not already notified
             if balance < 0:

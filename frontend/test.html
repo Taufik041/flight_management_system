@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Frontend Test Page</h1>
+    
+    <div id="backendStatus" class="status">Testing backend connection...</div>
+    <div id="frontendStatus" class="status">Frontend is working!</div>
+    
+    <button onclick="testBackend()">Test Backend Connection</button>
+    <button onclick="testLogin()">Test Login Endpoint</button>
+    
+    <div id="results"></div>
+
+    <script>
+        async function testBackend() {
+            try {
+                const response = await fetch('http://localhost:8000/');
+                const data = await response.json();
+                document.getElementById('backendStatus').innerHTML = 
+                    `<span class="success">✅ Backend connected! Response: ${JSON.stringify(data)}</span>`;
+            } catch (error) {
+                document.getElementById('backendStatus').innerHTML = 
+                    `<span class="error">❌ Backend connection failed: ${error.message}</span>`;
+            }
+        }
+        
+        async function testLogin() {
+            try {
+                const response = await fetch('http://localhost:8000/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@gmail.com',
+                        password: 'Admin123'
+                    })
+                });
+                
+                const data = await response.json();
+                document.getElementById('results').innerHTML = 
+                    `<div class="status success">✅ Login endpoint working! Response: ${JSON.stringify(data)}</div>`;
+            } catch (error) {
+                document.getElementById('results').innerHTML = 
+                    `<div class="status error">❌ Login endpoint failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Test backend on page load
+        testBackend();
+    </script>
+</body>
+</html> 

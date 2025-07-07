@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Flight Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Student Dashboard</h1>
+        </header>
+        
+        <nav class="navbar">
+            <div class="navbar-brand">Flight Management System</div>
+            <ul class="navbar-links">
+                <li><a href="#profile" onclick="showSection('profileSection')">Profile</a></li>
+                <li><a href="#dashboard" onclick="showSection('dashboardSection')">Dashboard</a></li>
+                <li><a href="#notifications" onclick="showSection('notificationsSection')">Notifications</a></li>
+                <li><button class="logout-btn" onclick="logout()">Logout</button></li>
+            </ul>
+        </nav>
+        <div id="profileSection" class="profile-section" style="display:none;">
+            <div class="form-container">
+                <h2>Profile</h2>
+                <div id="profileInfo">
+                    <p>Loading profile...</p>
+                </div>
+                <div id="profileEditForm" style="display:none;">
+                    <h3>Edit Profile</h3>
+                    <form id="editProfileForm">
+                        <div class="form-group">
+                            <label for="editFirstName">First Name:</label>
+                            <input type="text" id="editFirstName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editLastName">Last Name:</label>
+                            <input type="text" id="editLastName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editPhone">Phone Number:</label>
+                            <input type="tel" id="editPhone" required>
+                        </div>
+                        <button type="submit" class="submit-btn">Save Changes</button>
+                        <button type="button" onclick="cancelEdit()" class="btn btn-secondary">Cancel</button>
+                    </form>
+                </div>
+                <div class="profile-actions">
+                    <button onclick="showEditProfile()" class="btn btn-primary">Edit Profile</button>
+                    <button onclick="generateIdCard()" class="btn btn-success">Generate ID Card</button>
+                </div>
+            </div>
+        </div>
+        <div id="notificationsSection" class="notifications-section" style="display:none;">
+            <div class="form-container">
+                <h2>Notifications</h2>
+                <div id="notificationsList">
+                    <p>No notifications available.</p>
+                </div>
+            </div>
+        </div>
+        <div id="dashboardSection">
+            <h2>Welcome, <span id="userName">Student</span>!</h2>
+            
+            <div class="dashboard-grid">
+                <div class="dashboard-card">
+                    <h3>Current Program</h3>
+                    <p id="currentProgram">Not enrolled</p>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Account Balance</h3>
+                    <p id="accountBalance">₹0.00</p>
+                    <button class="btn btn-primary" onclick="showPaymentForm()">Add Balance</button>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Total Flight Hours</h3>
+                    <p id="flightHours">0 hours</p>
+                </div>
+            </div>
+            
+            <div class="task-list">
+                <h3>Your Tasks</h3>
+                <div id="tasksContainer">
+                    <p>Loading tasks...</p>
+                </div>
+            </div>
+            
+            <div class="task-list">
+                <h3>Available Programs</h3>
+                <div id="programsContainer">
+                    <p>Loading programs...</p>
+                </div>
+            </div>
+
+            <div class="task-list">
+                <h3>Payment History</h3>
+                <div id="paymentLogsContainer">
+                    <p>Loading payment logs...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+        <div class="form-container" style="margin:50px auto;">
+            <h2>Add Balance</h2>
+            <form id="paymentForm">
+                <div class="form-group">
+                    <label for="paymentAmount">Amount:</label>
+                    <input type="number" id="paymentAmount" min="1" required>
+                </div>
+                <button type="submit" class="submit-btn">Add</button>
+                <button type="button" onclick="hidePaymentForm()" class="btn btn-secondary">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <style>
+    .navbar {
+        background: #667eea;
+        color: white;
+        padding: 16px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-radius: 0 0 10px 10px;
+        margin-bottom: 30px;
+    }
+    .navbar-brand {
+        font-size: 1.5rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+    }
+    .navbar-links {
+        list-style: none;
+        display: flex;
+        gap: 24px;
+        margin: 0;
+        padding: 0;
+        align-items: center;
+    }
+    .navbar-links li {
+        display: inline;
+    }
+    .navbar-links a {
+        color: white;
+        text-decoration: none;
+        font-size: 1rem;
+        padding: 8px 16px;
+        border-radius: 5px;
+        transition: background 0.2s;
+    }
+    .navbar-links a:hover {
+        background: #5a6fd8;
+    }
+    .navbar .logout-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1rem;
+        margin-left: 16px;
+    }
+    .navbar .logout-btn:hover {
+        background: #c82333;
+    }
+    .profile-section, .notifications-section {
+        margin-top: 30px;
+    }
+    .profile-photo {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-bottom: 16px;
+        border: 2px solid #667eea;
+    }
+    .profile-actions {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+    </style>
+
+    <script>
+        // Check if user is logged in
+        const userType = localStorage.getItem('userType');
+        const userId = localStorage.getItem('userId');
+        
+        if (!userType || !userId || userType === 'admin') {
+            window.location.href = 'login.html';
+        }
+        
+        // Load dashboard data
+        async function loadDashboard() {
+            try {
+                // Load account summary
+                const accountResponse = await fetch(`http://localhost:8000/student/account?user_id=${userId}`);
+                const accountData = await accountResponse.json();
+                
+                document.getElementById('accountBalance').textContent = `₹${accountData.balance.toFixed(2)}`;
+                document.getElementById('flightHours').textContent = `${accountData.total_flight_hours || 0} hours`;
+                
+                // Show payment logs
+                const paymentLogsContainer = document.getElementById('paymentLogsContainer');
+                if (accountData.payments && accountData.payments.length > 0) {
+                    paymentLogsContainer.innerHTML = `<table style='width:100%;border-collapse:collapse;'>
+                        <tr><th style='text-align:left;'>Amount</th><th style='text-align:left;'>Program</th><th style='text-align:left;'>Date</th></tr>
+                        ${accountData.payments.map(p => `
+                            <tr>
+                                <td>₹${p.amount}</td>
+                                <td>${p.program_name || `Program ID: ${p.program_id}`}</td>
+                                <td>${new Date(p.paid_at).toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </table>`;
+                } else {
+                    paymentLogsContainer.innerHTML = '<p>No payments found.</p>';
+                }
+                
+                // Load programs
+                const programsResponse = await fetch(`http://localhost:8000/student/programs?user_id=${userId}`);
+                const programsData = await programsResponse.json();
+                
+                if (programsData.current_program) {
+                    document.getElementById('currentProgram').textContent = programsData.current_program.title;
+                }
+                
+                // Display available programs
+                const programsContainer = document.getElementById('programsContainer');
+                if (programsData.available_programs && programsData.available_programs.length > 0) {
+                    programsContainer.innerHTML = programsData.available_programs.map(program => `
+                        <div class="task-item">
+                            <h4>${program.title}</h4>
+                            <p>${program.description}</p>
+                            <div class="task-meta">
+                                <span>Price: ₹${program.price}</span>
+                                ${!programsData.current_program ? `<button onclick="enrollInProgram(${program.id})" class="btn btn-primary">Enroll</button>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    programsContainer.innerHTML = '<p>No programs available</p>';
+                }
+                
+                // Load tasks
+                const tasksResponse = await fetch(`http://localhost:8000/student/tasks?user_id=${userId}`);
+                const tasksData = await tasksResponse.json();
+                
+                const tasksContainer = document.getElementById('tasksContainer');
+                if (tasksData.upcoming && tasksData.upcoming.length > 0) {
+                    const upcomingTasks = tasksData.upcoming.map(task => `
+                        <div class="task-item">
+                            <h4>${task.title}</h4>
+                            <p>${task.description}</p>
+                            <div class="task-meta">
+                                <span>Duration: ${task.duration} minutes</span>
+                                <span>Cost: ₹${task.cost}</span>
+                                <button onclick="completeTask(${task.id})" class="btn btn-primary">Mark Complete</button>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    const completedTasks = tasksData.completed ? tasksData.completed.map(task => `
+                        <div class="task-item" style="opacity: 0.7;">
+                            <h4>${task.title} ✓</h4>
+                            <p>${task.description}</p>
+                            <div class="task-meta">
+                                <span>Duration: ${task.duration} minutes</span>
+                                <span>Cost: ₹${task.cost}</span>
+                                <span style="color: green;">Completed</span>
+                            </div>
+                        </div>
+                    `).join('') : '';
+                    
+                    tasksContainer.innerHTML = `
+                        <h4>Upcoming Tasks</h4>
+                        ${upcomingTasks}
+                        ${completedTasks ? '<h4>Completed Tasks</h4>' + completedTasks : ''}
+                    `;
+                } else {
+                    tasksContainer.innerHTML = '<p>No tasks available</p>';
+                }
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+        
+        async function enrollInProgram(programId) {
+            try {
+                const response = await fetch(`http://localhost:8000/student/programs/${programId}/enroll?user_id=${userId}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Enrolled successfully!');
+                    loadDashboard();
+                } else {
+                    alert('Enrollment failed: ' + data.detail);
+                }
+            } catch (error) {
+                console.error('Error enrolling:', error);
+                alert('Enrollment failed. Please try again.');
+            }
+        }
+        
+        async function completeTask(taskId) {
+            const flightTime = prompt('Enter flight time (in minutes):');
+            if (!flightTime || isNaN(flightTime)) {
+                alert('Please enter a valid flight time');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8000/student/tasks/${taskId}/complete?user_id=${userId}&flight_time=${flightTime}`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Task completed successfully!');
+                    loadDashboard();
+                } else {
+                    alert('Task completion failed: ' + data.detail);
+                }
+            } catch (error) {
+                console.error('Error completing task:', error);
+                alert('Task completion failed. Please try again.');
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('userType');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userEmail');
+            window.location.href = 'index.html';
+        }
+        
+        function showPaymentForm() {
+            document.getElementById('paymentModal').style.display = 'block';
+        }
+        function hidePaymentForm() {
+            document.getElementById('paymentModal').style.display = 'none';
+        }
+        document.getElementById('paymentForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const amount = document.getElementById('paymentAmount').value;
+            if (!amount || isNaN(amount) || amount <= 0) {
+                alert('Please enter a valid amount');
+                return;
+            }
+            // Get current program_id
+            const programsResponse = await fetch(`http://localhost:8000/student/programs?user_id=${userId}`);
+            const programsData = await programsResponse.json();
+            let programId = null;
+            if (programsData.current_program) {
+                programId = programsData.current_program.id;
+            } else if (programsData.available_programs && programsData.available_programs.length > 0) {
+                programId = programsData.available_programs[0].id;
+            }
+            if (!programId) {
+                alert('No program found to associate payment.');
+                return;
+            }
+            try {
+                const response = await fetch(`http://localhost:8000/student/pay?user_id=${userId}&program_id=${programId}&amount=${amount}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('Payment successful!');
+                    hidePaymentForm();
+                    loadDashboard();
+                } else {
+                    alert('Payment failed: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Payment failed. Please try again.');
+            }
+        });
+        
+        function showSection(sectionId) {
+            document.getElementById('profileSection').style.display = 'none';
+            document.getElementById('dashboardSection').style.display = 'none';
+            document.getElementById('notificationsSection').style.display = 'none';
+            document.getElementById(sectionId).style.display = 'block';
+        }
+        // Show dashboard by default
+        showSection('dashboardSection');
+        async function loadProfile() {
+            const userId = localStorage.getItem('userId');
+            try {
+                const response = await fetch(`http://localhost:8000/student/account?user_id=${userId}`);
+                const accountData = await response.json();
+                // Try to get more info from localStorage
+                const userEmail = localStorage.getItem('userEmail') || '';
+                let name = 'Student';
+                if (accountData && accountData.payments && accountData.payments.length > 0) {
+                    name = accountData.payments[0].name || 'Student';
+                }
+                // For demo, just show email and id
+                document.getElementById('profileInfo').innerHTML = `
+                    <img src="media/photos/self.jpg" alt="Profile Photo" class="profile-photo" onerror="this.src='https://ui-avatars.com/api/?name=${userEmail}'">
+                    <p><strong>Email:</strong> ${userEmail}</p>
+                    <p><strong>User ID:</strong> ${userId}</p>
+                `;
+            } catch (error) {
+                document.getElementById('profileInfo').innerHTML = '<p>Failed to load profile.</p>';
+            }
+        }
+        
+        async function loadFullProfile() {
+            const userId = localStorage.getItem('userId');
+            try {
+                // Get user details from account summary
+                const response = await fetch(`http://localhost:8000/student/account?user_id=${userId}`);
+                const accountData = await response.json();
+                
+                const userInfo = accountData.user_info;
+                
+                document.getElementById('profileInfo').innerHTML = `
+                    <img src="${userInfo.photo_path || 'media/photos/self.jpg'}" alt="Profile Photo" class="profile-photo" onerror="this.src='https://ui-avatars.com/api/?name=${userInfo.first_name}+${userInfo.last_name}'">
+                    <p><strong>First Name:</strong> <span id="displayFirstName">${userInfo.first_name}</span></p>
+                    <p><strong>Last Name:</strong> <span id="displayLastName">${userInfo.last_name}</span></p>
+                    <p><strong>Email:</strong> ${userInfo.email}</p>
+                    <p><strong>Phone:</strong> <span id="displayPhone">${userInfo.phone_number}</span></p>
+                    <p><strong>User ID:</strong> ${userId}</p>
+                `;
+                
+                // Store user data for editing
+                window.currentUserData = userInfo;
+            } catch (error) {
+                document.getElementById('profileInfo').innerHTML = '<p>Failed to load profile.</p>';
+            }
+        }
+        
+        function showEditProfile() {
+            const userData = window.currentUserData;
+            if (userData) {
+                document.getElementById('editFirstName').value = userData.first_name || '';
+                document.getElementById('editLastName').value = userData.last_name || '';
+                document.getElementById('editPhone').value = userData.phone_number || '';
+            }
+            document.getElementById('profileInfo').style.display = 'none';
+            document.getElementById('profileEditForm').style.display = 'block';
+            document.querySelector('.profile-actions').style.display = 'none';
+        }
+        
+        function cancelEdit() {
+            document.getElementById('profileInfo').style.display = 'block';
+            document.getElementById('profileEditForm').style.display = 'none';
+            document.querySelector('.profile-actions').style.display = 'block';
+        }
+        
+        async function generateIdCard() {
+            const userId = localStorage.getItem('userId');
+            try {
+                const response = await fetch(`http://localhost:8000/student/id_card?user_id=${userId}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    // Create a download link for the ID card
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'id_card.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    alert('ID Card generated successfully!');
+                } else {
+                    alert('Failed to generate ID card.');
+                }
+            } catch (error) {
+                alert('Failed to generate ID card. Please try again.');
+            }
+        }
+        
+        // Edit profile form handler
+        document.getElementById('editProfileForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const userId = localStorage.getItem('userId');
+            const formData = {
+                first_name: document.getElementById('editFirstName').value,
+                last_name: document.getElementById('editLastName').value,
+                phone_number: document.getElementById('editPhone').value
+            };
+            
+            try {
+                const response = await fetch(`http://localhost:8000/admin/students/${userId}/update`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Profile updated successfully!');
+                    cancelEdit();
+                    loadFullProfile();
+                } else {
+                    alert('Failed to update profile: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Failed to update profile. Please try again.');
+            }
+        });
+        
+        // Load profile info when profile section is shown
+        document.querySelector('a[href="#profile"]').addEventListener('click', loadFullProfile);
+        
+        // Load dashboard on page load
+        loadDashboard();
+
+        // Load account summary
+        async function loadAccountSummary() {
+            try {
+                const response = await fetch(`/api/students/account?user_id=${userId}`);
+                const data = await response.json();
+                
+                document.getElementById('accountBalance').textContent = `$${data.balance}`;
+                
+                // Display payments
+                const paymentsList = document.getElementById('paymentsList');
+                paymentsList.innerHTML = '';
+                data.payments.forEach(payment => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>Program ID: ${payment.program_id}</span>
+                        <span>$${payment.amount}</span>
+                        <span>${new Date(payment.paid_at).toLocaleDateString()}</span>
+                    `;
+                    paymentsList.appendChild(li);
+                });
+                
+                // Display spent summary
+                const spentList = document.getElementById('spentList');
+                spentList.innerHTML = '';
+                data.spent_summary.forEach(item => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>Task ID: ${item.task_id}</span>
+                        <span>${item.flight_time}h</span>
+                        <span>$${item.amount}</span>
+                    `;
+                    spentList.appendChild(li);
+                });
+            } catch (error) {
+                console.error('Error loading account summary:', error);
+            }
+        }
+    </script>
+</body>
+</html> 
